@@ -1,8 +1,28 @@
 package main
 
-import "github.com/hashicorp/packer/packer/plugin"
+import (
+	"flag"
+	"fmt"
+	"os"
+
+	"github.com/hashicorp/packer/packer/plugin"
+)
+
+// Version number constant.
+const Version = "0.0.1"
+
+var (
+	versDisp = flag.Bool("version", false, "Display version")
+)
 
 func main() {
+	flag.Parse()
+
+	if *versDisp {
+		fmt.Printf("Version: v%s\n", Version)
+		os.Exit(0)
+	}
+
 	server, err := plugin.Server()
 	if err != nil {
 		panic(err)
