@@ -13,10 +13,12 @@ import (
 
 // Config struct containing variables
 type Config struct {
-	Version    string `mapstructure:"version"`
-	CodePath   string `mapstructure:"code_path"`
-	RunCommand string `mapstructure:"run_command"`
-	StagingDir string `mapstructure:"staging_dir"`
+	Version        string `mapstructure:"version"`
+	CodePath       string `mapstructure:"code_path"`
+	RunCommand     string `mapstructure:"run_command"`
+	InstallCommand string `mapstructure:"install_command"`
+	StagingDir     string `mapstructure:"staging_dir"`
+	PreventSudo    bool   `mapstructure:"prevent_sudo"`
 
 	ctx interpolate.Context
 }
@@ -25,6 +27,18 @@ type Config struct {
 type Provisioner struct {
 	config        Config
 	guestCommands *provisioner.GuestCommands
+}
+
+// RunTemplate for temp storage of interpolation vars
+type RunTemplate struct {
+	StagingDir string
+	Sudo       bool
+}
+
+// InstallTemplate for temp storage of interpolation vars
+type InstallTemplate struct {
+	Sudo    bool
+	Version string
 }
 
 // Prepare parses the config and get everything ready
@@ -41,8 +55,16 @@ func (p *Provisioner) Prepare(raws ...interface{}) error {
 		p.config.StagingDir = "/tmp/packer-terraform"
 	}
 
+	if p.config.Version == "" {
+		p.config.Version = "0.12.15"
+	}
+
+	if p.config.InstallCommand == "" {
+		p.config.InstallCommand = "curl https://releases.hashicorp.com/terraform/{{.Version}}/terraform_{{.Version}}_linux_amd64.zip -so /tmp/terraform.zip \u0026\u0026 {{if .Sudo}}sudo {{end}}unzip -d /usr/local/bin/ /tmp/terraform.zip"
+	}
+
 	if p.config.RunCommand == "" {
-		p.config.RunCommand = "cd {{.StagingDir}} \u0026\u0026 /usr/local/bin/terraform init \u0026\u0026 /usr/local/bin/terraform apply -auto-approve"
+		p.config.RunCommand = "cd {{.StagingDir}} \u0026\u0026 {{if .Sudo}}sudo {{end}}/usr/local/bin/terraform init \u0026\u0026 {{if .Sudo}}sudo {{end}}/usr/local/bin/terraform apply -auto-approve"
 	}
 
 	return nil
@@ -57,11 +79,53 @@ func (p *Provisioner) Provision(_ context.Context, ui packer.Ui, comm packer.Com
 		return fmt.Errorf("Error uploading code: %s", err)
 	}
 
+	if err := p.installTerraform(ui, comm); err != nil {
+		return fmt.Errorf("Error installing Terraform: %s", err)
+	}
+
+	if err := p.runTerraform(ui, comm); err != nil {
+		return fmt.Errorf("Error running Terraform: %s", err)
+	}
+
+	return nil
+}
+
+func (p *Provisioner) runTerraform(ui packer.Ui, comm packer.Communicator) error {
 	ui.Message("Running Terraform")
-	p.config.ctx.Data = &Config{
+	p.config.ctx.Data = &RunTemplate{
 		StagingDir: p.config.StagingDir,
+		Sudo:       !p.config.PreventSudo,
 	}
 	command, err := interpolate.Render(p.config.RunCommand, &p.config.ctx)
+	if err != nil {
+		return err
+	}
+
+	var out, outErr bytes.Buffer
+	cmd := &packer.RemoteCmd{
+		Command: command,
+		Stdin:   nil,
+		Stdout:  &out,
+		Stderr:  &outErr,
+	}
+
+	ctx := context.TODO()
+	if err := cmd.RunWithUi(ctx, comm, ui); err != nil {
+		return err
+	}
+	if cmd.ExitStatus() != 0 {
+		return fmt.Errorf("non-zero exit status")
+	}
+	return nil
+}
+
+func (p *Provisioner) installTerraform(ui packer.Ui, comm packer.Communicator) error {
+	ui.Message("Installing Terraform")
+	p.config.ctx.Data = &InstallTemplate{
+		Version: p.config.Version,
+		Sudo:    !p.config.PreventSudo,
+	}
+	command, err := interpolate.Render(p.config.InstallCommand, &p.config.ctx)
 	if err != nil {
 		return err
 	}
