@@ -3,12 +3,35 @@
 Inspired by Megan Marsh's talk https://www.hashicorp.com/resources/extending-packer
 I bit the bullet and started making my own ill advised provisioner for Terraform.
 
+## Installation
+
+Install the binary (you'll need `git` and `go`):
+
+    $ go get github.com/servian/packer-provisioner-terraform
+
+Copy the plugin into packer.d directory:
+
+    $ mkdir $HOME/.packer.d/plugins
+    $ cp $GOPATH/bin/packer-provisioner-terraform $HOME/.packer.d/plugins
+
 ## Usage
 
     "provisioners": [
       {
+        "inline": [
+          "yum install -y unzip curl"
+        ],
+        "type": "shell"
+      },
+      {
+        "code_path": "./tfcode",
+        "prevent_sudo": "true",
         "type": "terraform",
-        "code_path": "./tfcode"
+        "variables": {
+          "consul_server_node": "false",
+          "vault_alt_url": "https://example.com"
+        },
+        "version": "0.12.15"
       }
     ]
 
@@ -18,4 +41,5 @@ I bit the bullet and started making my own ill advised provisioner for Terraform
  * `code_path`(string) - (required) the path to the terraform code
  * `run_command`(string) - override the command to run Terraform
  * `install_command`(string) - override the command to run Terraform
- * `staging_dir`(string) - override the remote path to stage the code.  
+ * `staging_dir`(string) - override the remote path to stage the code.
+ * `variables`(map(String, String)) - set terraform variables into a terraform.auto.tfvars file

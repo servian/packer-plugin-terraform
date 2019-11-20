@@ -3,8 +3,12 @@ package main
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
+	"path/filepath"
+	"strings"
 
+	"github.com/hashicorp/packer/common"
 	"github.com/hashicorp/packer/helper/config"
 	"github.com/hashicorp/packer/packer"
 	"github.com/hashicorp/packer/provisioner"
@@ -13,12 +17,15 @@ import (
 
 // Config struct containing variables
 type Config struct {
+	common.PackerConfig `mapstructure:",squash"`
+
 	Version        string `mapstructure:"version"`
 	CodePath       string `mapstructure:"code_path"`
 	RunCommand     string `mapstructure:"run_command"`
 	InstallCommand string `mapstructure:"install_command"`
 	StagingDir     string `mapstructure:"staging_dir"`
 	PreventSudo    bool   `mapstructure:"prevent_sudo"`
+	Variables      map[string]interface{}
 
 	ctx interpolate.Context
 }
@@ -62,6 +69,17 @@ func (p *Provisioner) Prepare(raws ...interface{}) error {
 		p.config.RunCommand = "cd {{.StagingDir}} \u0026\u0026 {{if .Sudo}}sudo {{end}}/usr/local/bin/terraform init \u0026\u0026 {{if .Sudo}}sudo {{end}}/usr/local/bin/terraform apply -auto-approve"
 	}
 
+	var errs *packer.MultiError
+	p.config.Variables, err = p.processVariables()
+	if err != nil {
+		errs = packer.MultiErrorAppend(
+			errs, fmt.Errorf("Error processing Variables in JSON: %s", err))
+	}
+
+	if errs != nil && len(errs.Errors) > 0 {
+		return errs
+	}
+
 	return nil
 }
 
@@ -74,6 +92,10 @@ func (p *Provisioner) Provision(_ context.Context, ui packer.Ui, comm packer.Com
 		return fmt.Errorf("Error uploading code: %s", err)
 	}
 
+	if err := p.createTfvars(ui, comm); err != nil {
+		return fmt.Errorf("Error generating tfvars: %s", err)
+	}
+
 	ui.Message("Installing Terraform")
 	p.config.ctx.Data = &RunTemplate{
 		StagingDir: p.config.StagingDir,
@@ -82,7 +104,7 @@ func (p *Provisioner) Provision(_ context.Context, ui packer.Ui, comm packer.Com
 	}
 	command, err := interpolate.Render(p.config.InstallCommand, &p.config.ctx)
 	if err != nil {
-		return err
+		return fmt.Errorf("Error rendering Template: %s", err)
 	}
 	if err := p.runCommand(ui, comm, command); err != nil {
 		return fmt.Errorf("Error running Terraform: %s", err)
@@ -91,7 +113,7 @@ func (p *Provisioner) Provision(_ context.Context, ui packer.Ui, comm packer.Com
 	ui.Message("Running Terraform")
 	command, err = interpolate.Render(p.config.RunCommand, &p.config.ctx)
 	if err != nil {
-		return err
+		return fmt.Errorf("Error rendering Template: %s", err)
 	}
 	if err := p.runCommand(ui, comm, command); err != nil {
 		return fmt.Errorf("Error installing Terraform: %s", err)
@@ -127,4 +149,47 @@ func (p *Provisioner) uploadDirectory(ui packer.Ui, comm packer.Communicator, ds
 	}
 
 	return comm.UploadDir(dst, src, nil)
+}
+
+func (p *Provisioner) processVariables() (map[string]interface{}, error) {
+	jsonBytes, err := json.Marshal(p.config.Variables)
+	if err != nil {
+		panic(err)
+	}
+
+	// Process the bytes with the template processor
+	p.config.ctx.Data = nil
+	jsonBytesProcessed, err := interpolate.Render(string(jsonBytes), &p.config.ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	var result map[string]interface{}
+	if err := json.Unmarshal([]byte(jsonBytesProcessed), &result); err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+func (p *Provisioner) createTfvars(ui packer.Ui, comm packer.Communicator) error {
+	ui.Message("Creating tfvars file")
+
+	template := "{{ range $key, $value := . }}" +
+		"{{ $key }} = \"{{ $value }}\"\n" +
+		"{{ end }}"
+
+	p.config.ctx.Data = &p.config.Variables
+	tfvarsData, err := interpolate.Render(template, &p.config.ctx)
+	if err != nil {
+		return err
+	}
+
+	// Upload the bytes
+	remotePath := filepath.ToSlash(filepath.Join(p.config.StagingDir, "terraform.auto.tfvars"))
+	if err := comm.Upload(remotePath, strings.NewReader(tfvarsData), nil); err != nil {
+		return err
+	}
+
+	return nil
 }
