@@ -33,12 +33,7 @@ type Provisioner struct {
 type RunTemplate struct {
 	StagingDir string
 	Sudo       bool
-}
-
-// InstallTemplate for temp storage of interpolation vars
-type InstallTemplate struct {
-	Sudo    bool
-	Version string
+	Version    string
 }
 
 // Prepare parses the config and get everything ready
@@ -79,57 +74,33 @@ func (p *Provisioner) Provision(_ context.Context, ui packer.Ui, comm packer.Com
 		return fmt.Errorf("Error uploading code: %s", err)
 	}
 
-	if err := p.installTerraform(ui, comm); err != nil {
-		return fmt.Errorf("Error installing Terraform: %s", err)
-	}
-
-	if err := p.runTerraform(ui, comm); err != nil {
-		return fmt.Errorf("Error running Terraform: %s", err)
-	}
-
-	return nil
-}
-
-func (p *Provisioner) runTerraform(ui packer.Ui, comm packer.Communicator) error {
-	ui.Message("Running Terraform")
+	ui.Message("Installing Terraform")
 	p.config.ctx.Data = &RunTemplate{
 		StagingDir: p.config.StagingDir,
+		Version:    p.config.Version,
 		Sudo:       !p.config.PreventSudo,
-	}
-	command, err := interpolate.Render(p.config.RunCommand, &p.config.ctx)
-	if err != nil {
-		return err
-	}
-
-	var out, outErr bytes.Buffer
-	cmd := &packer.RemoteCmd{
-		Command: command,
-		Stdin:   nil,
-		Stdout:  &out,
-		Stderr:  &outErr,
-	}
-
-	ctx := context.TODO()
-	if err := cmd.RunWithUi(ctx, comm, ui); err != nil {
-		return err
-	}
-	if cmd.ExitStatus() != 0 {
-		return fmt.Errorf("non-zero exit status")
-	}
-	return nil
-}
-
-func (p *Provisioner) installTerraform(ui packer.Ui, comm packer.Communicator) error {
-	ui.Message("Installing Terraform")
-	p.config.ctx.Data = &InstallTemplate{
-		Version: p.config.Version,
-		Sudo:    !p.config.PreventSudo,
 	}
 	command, err := interpolate.Render(p.config.InstallCommand, &p.config.ctx)
 	if err != nil {
 		return err
 	}
+	if err := p.runCommand(ui, comm, command); err != nil {
+		return fmt.Errorf("Error running Terraform: %s", err)
+	}
 
+	ui.Message("Running Terraform")
+	command, err = interpolate.Render(p.config.RunCommand, &p.config.ctx)
+	if err != nil {
+		return err
+	}
+	if err := p.runCommand(ui, comm, command); err != nil {
+		return fmt.Errorf("Error installing Terraform: %s", err)
+	}
+
+	return nil
+}
+
+func (p *Provisioner) runCommand(ui packer.Ui, comm packer.Communicator, command string) error {
 	var out, outErr bytes.Buffer
 	cmd := &packer.RemoteCmd{
 		Command: command,
