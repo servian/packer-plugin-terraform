@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -57,6 +58,11 @@ func (p *Provisioner) Prepare(raws ...interface{}) error {
 		p.config.StagingDir = "/tmp/packer-terraform"
 	}
 
+	_, err = os.Stat(p.config.CodePath)
+	if err != nil {
+		return fmt.Errorf("bad source '%s': %s", p.config.CodePath, err)
+	}
+
 	if p.config.Version == "" {
 		p.config.Version = "0.12.15"
 	}
@@ -69,15 +75,9 @@ func (p *Provisioner) Prepare(raws ...interface{}) error {
 		p.config.RunCommand = "cd {{.StagingDir}} \u0026\u0026 {{if .Sudo}}sudo {{end}}/usr/local/bin/terraform init \u0026\u0026 {{if .Sudo}}sudo {{end}}/usr/local/bin/terraform apply -auto-approve"
 	}
 
-	var errs *packer.MultiError
 	p.config.Variables, err = p.processVariables()
 	if err != nil {
-		errs = packer.MultiErrorAppend(
-			errs, fmt.Errorf("Error processing Variables in JSON: %s", err))
-	}
-
-	if errs != nil && len(errs.Errors) > 0 {
-		return errs
+		return fmt.Errorf("Error processing Variables in JSON: %s", err)
 	}
 
 	return nil
