@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/hashicorp/hcl/v2/hcldec"
 	"github.com/hashicorp/packer/common"
 	"github.com/hashicorp/packer/helper/config"
 	"github.com/hashicorp/packer/packer"
@@ -71,6 +72,9 @@ type RunTemplate struct {
 	Version    string
 }
 
+// ConfigSpec gets the FlatMapStructure for HCL Support.
+func (p *Provisioner) ConfigSpec() hcldec.ObjectSpec { return p.config.FlatMapstructure().HCL2Spec() }
+
 // Prepare parses the config and get everything ready
 func (p *Provisioner) Prepare(raws ...interface{}) error {
 	err := config.Decode(&p.config, &config.DecodeOpts{
@@ -117,7 +121,7 @@ func (p *Provisioner) Prepare(raws ...interface{}) error {
 }
 
 // Provision does the work of installing Terraform and running it on the remote
-func (p *Provisioner) Provision(_ context.Context, ui packer.Ui, comm packer.Communicator) error {
+func (p *Provisioner) Provision(_ context.Context, ui packer.Ui, comm packer.Communicator, _ map[string]interface{}) error {
 	ui.Say("Provisioning with Terraform...")
 
 	ui.Message("Uploading Code")
