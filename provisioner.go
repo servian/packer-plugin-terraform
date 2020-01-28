@@ -33,12 +33,13 @@ var guestOSTypeConfigs = map[string]guestOSTypeConfig{
 		stagingDir: "/tmp/packer-terraform",
 	},
 	provisioner.WindowsOSType: {
-		runCommand: "cd {{.StagingDir}} \u0026\u0026 C:/Windows/Temp/terraform init \u0026\u0026 " +
-			"C:/Windows/Temp/terraform apply -auto-approve",
-		installCommand: "Invoke-WebRequest -Uri 'https://releases.hashicorp.com/terraform/{{.Version}}/terraform_{{.Version}}_windows_amd64.zip' " +
-			"-OutFile 'C:/Windows/Temp/terraform.zip' \u0026\u0026 " +
-			"Expand-Archive 'C:/Windows/Temp/terraform.zip' -DestinationPath 'C:/Windows/Temp/terraform'",
-		stagingDir: "C:/Windows/Temp/packer-terraform",
+		runCommand: "cd {{.StagingDir}} \u0026\u0026 C:\\Windows\\Temp\\terraform init \u0026\u0026 " +
+			"C:\\Windows\\Temp\\terraform apply -auto-approve",
+		installCommand: "powershell.exe -Command \"Invoke-WebRequest -UseBasicParsing -Uri " +
+			" 'https://releases.hashicorp.com/terraform/{{.Version}}/terraform_{{.Version}}_windows_amd64.zip' " +
+			" -OutFile 'C:\\Windows\\Temp\\terraform.zip' ; " +
+			"Expand-Archive C:\\Windows\\Temp\\terraform.zip -DestinationPath 'C:\\Windows\\Temp\\'\"",
+		stagingDir: "C:\\Windows\\Temp\\packer-terraform",
 	},
 }
 
