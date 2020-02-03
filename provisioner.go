@@ -9,12 +9,39 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/hashicorp/hcl/v2/hcldec"
 	"github.com/hashicorp/packer/common"
 	"github.com/hashicorp/packer/helper/config"
 	"github.com/hashicorp/packer/packer"
 	"github.com/hashicorp/packer/provisioner"
 	"github.com/hashicorp/packer/template/interpolate"
 )
+
+type guestOSTypeConfig struct {
+	runCommand     string
+	installCommand string
+	stagingDir     string
+}
+
+var guestOSTypeConfigs = map[string]guestOSTypeConfig{
+	provisioner.UnixOSType: {
+		runCommand: "cd {{.StagingDir}} \u0026\u0026 {{if .Sudo}}sudo {{end}}/usr/local/bin/terraform init \u0026\u0026 " +
+			"{{if .Sudo}}sudo {{end}}/usr/local/bin/terraform apply -auto-approve",
+		installCommand: "curl https://releases.hashicorp.com/terraform/{{.Version}}/terraform_{{.Version}}_linux_amd64.zip " +
+			"-so /tmp/terraform.zip \u0026\u0026 " +
+			"{{if .Sudo}}sudo {{end}}unzip -d /usr/local/bin/ /tmp/terraform.zip",
+		stagingDir: "/tmp/packer-terraform",
+	},
+	provisioner.WindowsOSType: {
+		runCommand: "cd {{.StagingDir}} \u0026\u0026 C:\\Windows\\Temp\\terraform init \u0026\u0026 " +
+			"C:\\Windows\\Temp\\terraform apply -auto-approve",
+		installCommand: "powershell.exe -Command \"Invoke-WebRequest -UseBasicParsing -Uri " +
+			" 'https://releases.hashicorp.com/terraform/{{.Version}}/terraform_{{.Version}}_windows_amd64.zip' " +
+			" -OutFile 'C:\\Windows\\Temp\\terraform.zip' ; " +
+			"Expand-Archive C:\\Windows\\Temp\\terraform.zip -DestinationPath 'C:\\Windows\\Temp\\'\"",
+		stagingDir: "C:\\Windows\\Temp\\packer-terraform",
+	},
+}
 
 // Config struct containing variables
 type Config struct {
@@ -27,14 +54,16 @@ type Config struct {
 	StagingDir     string `mapstructure:"staging_dir"`
 	PreventSudo    bool   `mapstructure:"prevent_sudo"`
 	Variables      map[string]interface{}
+	GuestOSType    string `mapstructure:"guest_os_type"`
 
 	ctx interpolate.Context
 }
 
 // Provisioner is the interface to install and run Terraform
 type Provisioner struct {
-	config        Config
-	guestCommands *provisioner.GuestCommands
+	config            Config
+	guestOSTypeConfig guestOSTypeConfig
+	guestCommands     *provisioner.GuestCommands
 }
 
 // RunTemplate for temp storage of interpolation vars
@@ -43,6 +72,9 @@ type RunTemplate struct {
 	Sudo       bool
 	Version    string
 }
+
+// ConfigSpec gets the FlatMapStructure for HCL Support.
+func (p *Provisioner) ConfigSpec() hcldec.ObjectSpec { return p.config.FlatMapstructure().HCL2Spec() }
 
 // Prepare parses the config and get everything ready
 func (p *Provisioner) Prepare(raws ...interface{}) error {
@@ -54,8 +86,14 @@ func (p *Provisioner) Prepare(raws ...interface{}) error {
 		return err
 	}
 
+	if p.config.GuestOSType == "" {
+		p.config.GuestOSType = provisioner.DefaultOSType
+	}
+	p.config.GuestOSType = strings.ToLower(p.config.GuestOSType)
+	p.guestOSTypeConfig = guestOSTypeConfigs[p.config.GuestOSType]
+
 	if p.config.StagingDir == "" {
-		p.config.StagingDir = "/tmp/packer-terraform"
+		p.config.StagingDir = p.guestOSTypeConfig.stagingDir
 	}
 
 	_, err = os.Stat(p.config.CodePath)
@@ -64,15 +102,15 @@ func (p *Provisioner) Prepare(raws ...interface{}) error {
 	}
 
 	if p.config.Version == "" {
-		p.config.Version = "0.12.15"
+		p.config.Version = "0.12.16"
 	}
 
 	if p.config.InstallCommand == "" {
-		p.config.InstallCommand = "curl https://releases.hashicorp.com/terraform/{{.Version}}/terraform_{{.Version}}_linux_amd64.zip -so /tmp/terraform.zip \u0026\u0026 {{if .Sudo}}sudo {{end}}unzip -d /usr/local/bin/ /tmp/terraform.zip"
+		p.config.InstallCommand = p.guestOSTypeConfig.installCommand
 	}
 
 	if p.config.RunCommand == "" {
-		p.config.RunCommand = "cd {{.StagingDir}} \u0026\u0026 {{if .Sudo}}sudo {{end}}/usr/local/bin/terraform init \u0026\u0026 {{if .Sudo}}sudo {{end}}/usr/local/bin/terraform apply -auto-approve"
+		p.config.RunCommand = p.guestOSTypeConfig.runCommand
 	}
 
 	p.config.Variables, err = p.processVariables()
@@ -84,7 +122,7 @@ func (p *Provisioner) Prepare(raws ...interface{}) error {
 }
 
 // Provision does the work of installing Terraform and running it on the remote
-func (p *Provisioner) Provision(_ context.Context, ui packer.Ui, comm packer.Communicator) error {
+func (p *Provisioner) Provision(_ context.Context, ui packer.Ui, comm packer.Communicator, _ map[string]interface{}) error {
 	ui.Say("Provisioning with Terraform...")
 
 	ui.Message("Uploading Code")
