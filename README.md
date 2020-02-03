@@ -1,5 +1,8 @@
 # packer-provisioner-terraform
 
+* [![Build Status](https://travis-ci.org/servian/packer-provisioner-terraform.svg?branch=master)](https://travis-ci.org/servian/packer-provisioner-terraform)
+* [![license MPL-2.0](https://img.shields.io/badge/license-MPL--2.0-brightgreen.svg)](https://opensource.org/licenses/MPL-2.0)
+
 Inspired by Megan Marsh's talk https://www.hashicorp.com/resources/extending-packer
 I bit the bullet and started making my own ill advised provisioner for Terraform.
 
@@ -43,3 +46,8 @@ Copy the plugin into packer.d directory:
  * `install_command`(string) - override the command to run Terraform
  * `staging_dir`(string) - override the remote path to stage the code.
  * `variables`(map(String, String)) - set terraform variables into a terraform.auto.tfvars file
+
+## License
+
+The code is available as open source under the terms of the [Mozilla Public License 2.0](https://opensource.org/licenses/MPL-2.0)
+
