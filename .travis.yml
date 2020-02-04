@@ -5,4 +5,7 @@ go:
  - 1.13.x
  - master
 
-
+script: 
+ - go fmt
+ - go vet .
+ - go test -v ./...
