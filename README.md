@@ -2,6 +2,8 @@
 
 * [![Build Status](https://travis-ci.org/servian/packer-provisioner-terraform.svg?branch=master)](https://travis-ci.org/servian/packer-provisioner-terraform)
 * [![license MPL-2.0](https://img.shields.io/badge/license-MPL--2.0-brightgreen.svg)](https://opensource.org/licenses/MPL-2.0)
+* [![GoReportCard](https://goreportcard.com/badge/github.com/servian/packer-provisioner-terraform)](https://goreportcard.com/report/github.com/servian/packer-provisioner-terraform)
+* [![Version](http://img.shields.io/github/release/servian/packer-provisioner-terraform/all.svg?style=flat)](https://github.com/Servian/packer-provisioner-terraform/releases)
 
 Inspired by Megan Marsh's talk https://www.hashicorp.com/resources/extending-packer
 I bit the bullet and started making my own ill advised provisioner for Terraform.
