@@ -102,7 +102,11 @@ func (p *Provisioner) Prepare(raws ...interface{}) error {
 	}
 
 	if p.config.Version == "" {
-		p.config.Version = "0.12.16"
+		tfVer, err := FetchLatestTerraform()
+		if err != nil {
+			return fmt.Errorf("unable to fetch Terraform Version %s", err)
+		}
+		p.config.Version = tfVer
 	}
 
 	if p.config.InstallCommand == "" {
