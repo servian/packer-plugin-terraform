@@ -1,8 +1,17 @@
 # Changelog
 
-## [0.0.2](https://github.com/servian/packer-provisioner-terraform/tree/0.0.2) (2020-02-04)
+## [0.0.3](https://github.com/servian/packer-provisioner-terraform/tree/0.0.3) (2020-05-08)
 
-[Full Changelog](https://github.com/servian/packer-provisioner-terraform/compare/v0.0.1...0.0.2)
+[Full Changelog](https://github.com/servian/packer-provisioner-terraform/compare/v0.0.2...0.0.3)
+
+**Implemented enhancements:**
+
+- Dynamically pull latest TF build if unspecified [\#4](https://github.com/servian/packer-provisioner-terraform/issues/4)
+- Fetch latest Terraform version from Hashicorp. [\#5](https://github.com/servian/packer-provisioner-terraform/pull/5) ([tristanmorgan](https://github.com/tristanmorgan))
+
+## [v0.0.2](https://github.com/servian/packer-provisioner-terraform/tree/v0.0.2) (2020-02-03)
+
+[Full Changelog](https://github.com/servian/packer-provisioner-terraform/compare/v0.0.1...v0.0.2)
 
 **Implemented enhancements:**
 

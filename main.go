@@ -9,7 +9,7 @@ import (
 )
 
 // Version number constant.
-const Version = "0.0.2"
+const Version = "0.0.3"
 
 var (
 	versDisp = flag.Bool("version", false, "Display version")
