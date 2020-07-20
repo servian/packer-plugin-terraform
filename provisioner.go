@@ -129,11 +129,16 @@ func (p *Provisioner) Prepare(raws ...interface{}) error {
 func (p *Provisioner) Provision(_ context.Context, ui packer.Ui, comm packer.Communicator, _ map[string]interface{}) error {
 	ui.Say("Provisioning with Terraform...")
 
+	if err := p.createDir(ui, comm, p.config.StagingDir); err != nil {
+		return fmt.Errorf("Error creating staging directory: %s", err)
+	}
+
 	ui.Message("Uploading Code")
 	if err := p.uploadDirectory(ui, comm, p.config.StagingDir, p.config.CodePath); err != nil {
 		return fmt.Errorf("Error uploading code: %s", err)
 	}
 
+	ui.Message("Genarating TFvars")
 	if err := p.createTfvars(ui, comm); err != nil {
 		return fmt.Errorf("Error generating tfvars: %s", err)
 	}
@@ -179,6 +184,23 @@ func (p *Provisioner) runCommand(ui packer.Ui, comm packer.Communicator, command
 	}
 	if cmd.ExitStatus() != 0 {
 		return fmt.Errorf("non-zero exit status")
+	}
+	return nil
+}
+
+func (p *Provisioner) createDir(ui packer.Ui, comm packer.Communicator, dir string) error {
+	ctx := context.TODO()
+	cmd := &packer.RemoteCmd{
+		Command: fmt.Sprintf("mkdir -p '%s'", dir),
+	}
+
+	ui.Message(fmt.Sprintf("Creating directory: %s", dir))
+	if err := cmd.RunWithUi(ctx, comm, ui); err != nil {
+		return err
+	}
+
+	if cmd.ExitStatus() != 0 {
+		return fmt.Errorf("Non-zero exit status. See output above for more information.")
 	}
 	return nil
 }
