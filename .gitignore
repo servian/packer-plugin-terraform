@@ -1,1 +1,2 @@
-packer-provisioner-terraform
+packer-provisioner-terraform*
+go.sum

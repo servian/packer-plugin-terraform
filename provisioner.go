@@ -10,11 +10,11 @@ import (
 	"strings"
 
 	"github.com/hashicorp/hcl/v2/hcldec"
-	"github.com/hashicorp/packer/common"
-	"github.com/hashicorp/packer/helper/config"
-	"github.com/hashicorp/packer/packer"
-	"github.com/hashicorp/packer/provisioner"
-	"github.com/hashicorp/packer/template/interpolate"
+	"github.com/hashicorp/packer-plugin-sdk/common"
+	"github.com/hashicorp/packer-plugin-sdk/guestexec"
+	"github.com/hashicorp/packer-plugin-sdk/packer"
+	"github.com/hashicorp/packer-plugin-sdk/template/config"
+	"github.com/hashicorp/packer-plugin-sdk/template/interpolate"
 )
 
 type guestOSTypeConfig struct {
@@ -24,7 +24,7 @@ type guestOSTypeConfig struct {
 }
 
 var guestOSTypeConfigs = map[string]guestOSTypeConfig{
-	provisioner.UnixOSType: {
+	guestexec.UnixOSType: {
 		runCommand: "cd {{.StagingDir}} \u0026\u0026 {{if .Sudo}}sudo {{end}}/usr/local/bin/terraform init \u0026\u0026 " +
 			"{{if .Sudo}}sudo {{end}}/usr/local/bin/terraform apply -auto-approve",
 		installCommand: "curl https://releases.hashicorp.com/terraform/{{.Version}}/terraform_{{.Version}}_linux_amd64.zip " +
@@ -32,7 +32,7 @@ var guestOSTypeConfigs = map[string]guestOSTypeConfig{
 			"{{if .Sudo}}sudo {{end}}unzip -d /usr/local/bin/ /tmp/terraform.zip",
 		stagingDir: "/tmp/packer-terraform",
 	},
-	provisioner.WindowsOSType: {
+	guestexec.WindowsOSType: {
 		runCommand: "cd {{.StagingDir}} \u0026\u0026 C:\\Windows\\Temp\\terraform init \u0026\u0026 " +
 			"C:\\Windows\\Temp\\terraform apply -auto-approve",
 		installCommand: "powershell.exe -Command \"Invoke-WebRequest -UseBasicParsing -Uri " +
@@ -63,7 +63,7 @@ type Config struct {
 type Provisioner struct {
 	config            Config
 	guestOSTypeConfig guestOSTypeConfig
-	guestCommands     *provisioner.GuestCommands
+	guestCommands     *guestexec.GuestCommands
 }
 
 // RunTemplate for temp storage of interpolation vars
@@ -87,7 +87,7 @@ func (p *Provisioner) Prepare(raws ...interface{}) error {
 	}
 
 	if p.config.GuestOSType == "" {
-		p.config.GuestOSType = provisioner.DefaultOSType
+		p.config.GuestOSType = guestexec.DefaultOSType
 	}
 	p.config.GuestOSType = strings.ToLower(p.config.GuestOSType)
 	p.guestOSTypeConfig = guestOSTypeConfigs[p.config.GuestOSType]
