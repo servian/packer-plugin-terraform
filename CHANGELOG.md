@@ -1,5 +1,13 @@
 # Changelog
 
+## [v0.0.5](https://github.com/servian/packer-provisioner-terraform/tree/v0.0.5) (2021-02-17)
+
+[Full Changelog](https://github.com/servian/packer-provisioner-terraform/compare/v0.0.4...v0.0.5)
+
+**Merged pull requests:**
+
+- Update Go.mod and migrate to Packer-SDK. [\#7](https://github.com/servian/packer-provisioner-terraform/pull/7) ([tristanmorgan](https://github.com/tristanmorgan))
+
 ## [v0.0.4](https://github.com/servian/packer-provisioner-terraform/tree/v0.0.4) (2020-07-20)
 
 [Full Changelog](https://github.com/servian/packer-provisioner-terraform/compare/v0.0.3...v0.0.4)
