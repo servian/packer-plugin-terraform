@@ -9,7 +9,7 @@ import (
 )
 
 // Version number constant.
-const Version = "0.0.5"
+const Version = "0.0.6"
 
 var (
 	versDisp = flag.Bool("version", false, "Display version")
@@ -23,10 +23,11 @@ func main() {
 		os.Exit(0)
 	}
 
-	server, err := plugin.Server()
+	pps := plugin.NewSet()
+	pps.RegisterProvisioner(plugin.DEFAULT_NAME, new(Provisioner))
+	err := pps.Run()
 	if err != nil {
-		panic(err)
+		fmt.Fprintln(os.Stderr, err.Error())
+		os.Exit(1)
 	}
-	server.RegisterProvisioner(&Provisioner{})
-	server.Serve()
 }

@@ -1,3 +1,5 @@
+//go:generate mapstructure-to-hcl2 -type ProvisionerConfig
+
 package main
 
 import (
@@ -44,7 +46,7 @@ var guestOSTypeConfigs = map[string]guestOSTypeConfig{
 }
 
 // Config struct containing variables
-type Config struct {
+type ProvisionerConfig struct {
 	common.PackerConfig `mapstructure:",squash"`
 
 	Version        string `mapstructure:"version"`
@@ -61,7 +63,7 @@ type Config struct {
 
 // Provisioner is the interface to install and run Terraform
 type Provisioner struct {
-	config            Config
+	config            ProvisionerConfig
 	guestOSTypeConfig guestOSTypeConfig
 	guestCommands     *guestexec.GuestCommands
 }
