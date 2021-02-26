@@ -18,7 +18,7 @@ builds:
     flags:
       - -trimpath #removes all file system paths from the compiled executable
     ldflags:
-      - '-s -w'
+      - '-s -w -X main.Version={{.Version}} -X main.VersionPrerelease= '
     goos:
       - linux
     goarch:
@@ -29,7 +29,7 @@ builds:
     flags:
       - -trimpath #removes all file system paths from the compiled executable
     ldflags:
-      - '-s -w'
+      - '-s -w -X main.Version={{.Version}} -X main.VersionPrerelease= '
     goos:
       - freebsd
       - windows

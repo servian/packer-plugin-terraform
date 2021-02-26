@@ -81,8 +81,12 @@ func (p *Provisioner) ConfigSpec() hcldec.ObjectSpec { return p.config.FlatMapst
 // Prepare parses the config and get everything ready
 func (p *Provisioner) Prepare(raws ...interface{}) error {
 	err := config.Decode(&p.config, &config.DecodeOpts{
+		PluginType:         "packer.provisioner.terraform",
 		Interpolate:        true,
 		InterpolateContext: &p.config.ctx,
+		InterpolateFilter: &interpolate.RenderFilter{
+			Exclude: []string{},
+		},
 	}, raws...)
 	if err != nil {
 		return err
