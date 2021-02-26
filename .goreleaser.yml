@@ -12,7 +12,8 @@ builds:
       post:
         # This will check plugin compatibility against latest version of Packer
         - cmd: |
-            go mod download github.com/hashicorp/packer && go install github.com/hashicorp/packer/cmd/packer-plugins-check &&
+            go mod download github.com/hashicorp/packer &&
+            go install github.com/hashicorp/packer/cmd/packer-plugins-check &&
             packer-plugins-check -load={{ .Name }}
           dir: "{{ dir .Path}}"
     flags:

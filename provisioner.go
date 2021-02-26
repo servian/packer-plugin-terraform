@@ -1,4 +1,4 @@
-//go:generate mapstructure-to-hcl2 -type ProvisionerConfig
+//go:generate mapstructure-to-hcl2 -type Config
 
 package main
 
@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -46,7 +47,7 @@ var guestOSTypeConfigs = map[string]guestOSTypeConfig{
 }
 
 // Config struct containing variables
-type ProvisionerConfig struct {
+type Config struct {
 	common.PackerConfig `mapstructure:",squash"`
 
 	Version        string `mapstructure:"version"`
@@ -55,15 +56,16 @@ type ProvisionerConfig struct {
 	InstallCommand string `mapstructure:"install_command"`
 	StagingDir     string `mapstructure:"staging_dir"`
 	PreventSudo    bool   `mapstructure:"prevent_sudo"`
-	Variables      map[string]interface{}
-	GuestOSType    string `mapstructure:"guest_os_type"`
+
+	Variables   map[string]interface{} `mapstructure:"variables" mapstructure-to-hcl2:",skip"`
+	GuestOSType string                 `mapstructure:"guest_os_type"`
 
 	ctx interpolate.Context
 }
 
 // Provisioner is the interface to install and run Terraform
 type Provisioner struct {
-	config            ProvisionerConfig
+	config            Config
 	guestOSTypeConfig guestOSTypeConfig
 	guestCommands     *guestexec.GuestCommands
 }
@@ -99,6 +101,7 @@ func (p *Provisioner) Prepare(raws ...interface{}) error {
 	p.guestOSTypeConfig = guestOSTypeConfigs[p.config.GuestOSType]
 
 	if p.config.StagingDir == "" {
+		log.Println(fmt.Sprintf("Setting default StagingDir: %s", p.guestOSTypeConfig.stagingDir))
 		p.config.StagingDir = p.guestOSTypeConfig.stagingDir
 	}
 
@@ -112,14 +115,17 @@ func (p *Provisioner) Prepare(raws ...interface{}) error {
 		if err != nil {
 			return fmt.Errorf("unable to fetch Terraform Version %s", err)
 		}
+		log.Println(fmt.Sprintf("Setting default Terraform Version: %s", tfVer))
 		p.config.Version = tfVer
 	}
 
 	if p.config.InstallCommand == "" {
+		log.Println(fmt.Sprintf("Setting default InstallCommand: %s", p.guestOSTypeConfig.installCommand))
 		p.config.InstallCommand = p.guestOSTypeConfig.installCommand
 	}
 
 	if p.config.RunCommand == "" {
+		log.Println(fmt.Sprintf("Setting default RunCommand: %s", p.guestOSTypeConfig.runCommand))
 		p.config.RunCommand = p.guestOSTypeConfig.runCommand
 	}
 
@@ -159,6 +165,7 @@ func (p *Provisioner) Provision(_ context.Context, ui packer.Ui, comm packer.Com
 	if err != nil {
 		return fmt.Errorf("Error rendering Template: %s", err)
 	}
+	log.Println(fmt.Sprintf("Executing command: %s", command))
 	if err := p.runCommand(ui, comm, command); err != nil {
 		return fmt.Errorf("Error running Terraform: %s", err)
 	}
@@ -168,6 +175,7 @@ func (p *Provisioner) Provision(_ context.Context, ui packer.Ui, comm packer.Com
 	if err != nil {
 		return fmt.Errorf("Error rendering Template: %s", err)
 	}
+	log.Println(fmt.Sprintf("Executing command: %s", command))
 	if err := p.runCommand(ui, comm, command); err != nil {
 		return fmt.Errorf("Error installing Terraform: %s", err)
 	}
@@ -254,6 +262,7 @@ func (p *Provisioner) createTfvars(ui packer.Ui, comm packer.Communicator) error
 	if err != nil {
 		return err
 	}
+	log.Println(fmt.Sprintf("Templated Variables: %s", tfvarsData))
 
 	// Upload the bytes
 	remotePath := filepath.ToSlash(filepath.Join(p.config.StagingDir, "terraform.auto.tfvars"))

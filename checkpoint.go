@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"net/url"
 	"runtime"
@@ -60,6 +61,7 @@ func FetchLatestTerraform() (string, error) {
 	// enough to block on if checkpoint is broken/slow.
 	client.Timeout = time.Duration(3000) * time.Millisecond
 
+	log.Println(fmt.Sprintf("About to fetch from URL: %s", u.String()))
 	resp, err := client.Do(req)
 	if err != nil {
 		return "", err
@@ -76,5 +78,6 @@ func FetchLatestTerraform() (string, error) {
 	if err := json.NewDecoder(r).Decode(&result); err != nil {
 		return "", err
 	}
+	log.Println(fmt.Sprintf("Got version response: %s", result.CurrentVersion))
 	return result.CurrentVersion, nil
 }
