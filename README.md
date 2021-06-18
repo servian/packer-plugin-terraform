@@ -13,7 +13,7 @@ I bit the bullet and started making my own ill advised provisioner for Terraform
     packer {
       required_plugins {
         terraform = {
-          version = "= 0.0.6"
+          version = "= 0.0.7"
           source = "github.com/servian/terraform"
         }
       }
@@ -30,9 +30,10 @@ I bit the bullet and started making my own ill advised provisioner for Terraform
       provisioner "terraform" {
         code_path       = "./tfcode"
         prevent_sudo    = "true"
-        variables = {
-          consul_server_node = false
-        }
+        variable_string = jsonencode({
+            consul_server_node = false
+        })
+        version = "1.0.0"
       }
     }
 

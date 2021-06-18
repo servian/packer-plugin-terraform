@@ -12,8 +12,7 @@ builds:
       post:
         # This will check plugin compatibility against latest version of Packer
         - cmd: |
-            go mod download github.com/hashicorp/packer &&
-            go install github.com/hashicorp/packer/cmd/packer-plugins-check &&
+            go install github.com/hashicorp/packer/cmd/packer-plugins-check@latest &&
             packer-plugins-check -load={{ .Name }}
           dir: "{{ dir .Path}}"
     flags:
@@ -49,6 +48,8 @@ builds:
     binary: '{{ .ProjectName }}_v{{ .Version }}_x5.0_{{ .Os }}_{{ .Arch }}'
 archives:
 - format: zip
+  files:
+    - none*
   name_template: '{{ .ProjectName }}_v{{ .Version }}_x5.0_{{ .Os }}_{{ .Arch }}'
 checksum:
   name_template: '{{ .ProjectName }}_v{{ .Version }}_SHA256SUMS'

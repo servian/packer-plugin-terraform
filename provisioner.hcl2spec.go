@@ -24,6 +24,7 @@ type FlatConfig struct {
 	InstallCommand      *string           `mapstructure:"install_command" cty:"install_command" hcl:"install_command"`
 	StagingDir          *string           `mapstructure:"staging_dir" cty:"staging_dir" hcl:"staging_dir"`
 	PreventSudo         *bool             `mapstructure:"prevent_sudo" cty:"prevent_sudo" hcl:"prevent_sudo"`
+	VariableString      *string           `mapstructure:"variable_string" cty:"variable_string" hcl:"variable_string"`
 	GuestOSType         *string           `mapstructure:"guest_os_type" cty:"guest_os_type" hcl:"guest_os_type"`
 }
 
@@ -53,6 +54,7 @@ func (*FlatConfig) HCL2Spec() map[string]hcldec.Spec {
 		"install_command":            &hcldec.AttrSpec{Name: "install_command", Type: cty.String, Required: false},
 		"staging_dir":                &hcldec.AttrSpec{Name: "staging_dir", Type: cty.String, Required: false},
 		"prevent_sudo":               &hcldec.AttrSpec{Name: "prevent_sudo", Type: cty.Bool, Required: false},
+		"variable_string":            &hcldec.AttrSpec{Name: "variable_string", Type: cty.String, Required: false},
 		"guest_os_type":              &hcldec.AttrSpec{Name: "guest_os_type", Type: cty.String, Required: false},
 	}
 	return s

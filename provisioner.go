@@ -57,6 +57,8 @@ type Config struct {
 	StagingDir     string `mapstructure:"staging_dir"`
 	PreventSudo    bool   `mapstructure:"prevent_sudo"`
 
+	VariableString string `mapstructure:"variable_string"`
+
 	Variables   map[string]interface{} `mapstructure:"variables" mapstructure-to-hcl2:",skip"`
 	GuestOSType string                 `mapstructure:"guest_os_type"`
 
@@ -83,11 +85,14 @@ func (p *Provisioner) ConfigSpec() hcldec.ObjectSpec { return p.config.FlatMapst
 // Prepare parses the config and get everything ready
 func (p *Provisioner) Prepare(raws ...interface{}) error {
 	err := config.Decode(&p.config, &config.DecodeOpts{
-		PluginType:         "packer.provisioner.terraform",
+		PluginType:         "terraform",
 		Interpolate:        true,
 		InterpolateContext: &p.config.ctx,
 		InterpolateFilter: &interpolate.RenderFilter{
-			Exclude: []string{},
+			Exclude: []string{
+				"run_command",
+				"install_command",
+			},
 		},
 	}, raws...)
 	if err != nil {
@@ -129,16 +134,17 @@ func (p *Provisioner) Prepare(raws ...interface{}) error {
 		p.config.RunCommand = p.guestOSTypeConfig.runCommand
 	}
 
-	p.config.Variables, err = p.processVariables()
-	if err != nil {
-		return fmt.Errorf("Error processing Variables in JSON: %s", err)
+	if p.config.VariableString != "" {
+		if err := json.Unmarshal([]byte(p.config.VariableString), &p.config.Variables); err != nil {
+			return fmt.Errorf("Error processing Variables: %s", err)
+		}
 	}
 
 	return nil
 }
 
 // Provision does the work of installing Terraform and running it on the remote
-func (p *Provisioner) Provision(_ context.Context, ui packer.Ui, comm packer.Communicator, _ map[string]interface{}) error {
+func (p *Provisioner) Provision(ctx context.Context, ui packer.Ui, comm packer.Communicator, generatedData map[string]interface{}) error {
 	ui.Say("Provisioning with Terraform...")
 
 	if err := p.createDir(ui, comm, p.config.StagingDir); err != nil {
@@ -161,6 +167,8 @@ func (p *Provisioner) Provision(_ context.Context, ui packer.Ui, comm packer.Com
 		Version:    p.config.Version,
 		Sudo:       !p.config.PreventSudo,
 	}
+
+	log.Println(fmt.Sprintf("templating command: %s with %#v", p.config.InstallCommand, &p.config.ctx))
 	command, err := interpolate.Render(p.config.InstallCommand, &p.config.ctx)
 	if err != nil {
 		return fmt.Errorf("Error rendering Template: %s", err)
@@ -227,27 +235,6 @@ func (p *Provisioner) uploadDirectory(ui packer.Ui, comm packer.Communicator, ds
 	}
 
 	return comm.UploadDir(dst, src, nil)
-}
-
-func (p *Provisioner) processVariables() (map[string]interface{}, error) {
-	jsonBytes, err := json.Marshal(p.config.Variables)
-	if err != nil {
-		panic(err)
-	}
-
-	// Process the bytes with the template processor
-	p.config.ctx.Data = nil
-	jsonBytesProcessed, err := interpolate.Render(string(jsonBytes), &p.config.ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	var result map[string]interface{}
-	if err := json.Unmarshal([]byte(jsonBytesProcessed), &result); err != nil {
-		return nil, err
-	}
-
-	return result, nil
 }
 
 func (p *Provisioner) createTfvars(ui packer.Ui, comm packer.Communicator) error {
