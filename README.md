@@ -1,4 +1,4 @@
-# packer-provisioner-terraform
+# Packer Plugin Terraform
 
 * [![Build Status](https://www.travis-ci.com/servian/packer-plugin-terraform.svg?branch=main)](https://travis-ci.com/servian/packer-plugin-terraform)
 * [![license MPL-2.0](https://img.shields.io/badge/license-MPL--2.0-brightgreen.svg)](https://opensource.org/licenses/MPL-2.0)

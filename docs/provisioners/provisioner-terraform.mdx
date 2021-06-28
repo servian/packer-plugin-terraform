@@ -1,0 +1,70 @@
+---
+description: >
+  The terraform provisioner is used to provisioner Packer builds.
+page_title: terraform - Provisioners
+nav_title: terraform
+---
+
+# terraform
+
+Type: `terraform`
+
+The terraform provisioner is used to provisioner Packer builds. It runs HashiCorp Terraform on the remote instance allowing the use of modules and providers like [Local Provider](https://registry.terraform.io/providers/hashicorp/local/latest/docs).
+
+
+<!-- Provisioner Configuration Fields -->
+
+### Required
+
+- `code_path` (string) - The path of the terraform code to upload and run.
+
+
+<!--
+  Optional Configuration Fields
+-->
+
+### Optional
+
+- `version` (string) - The version of terraform to install, if unspecified will attempts to use tha latest.
+- `run_command` (string) - The command to run terraform with.
+- `install_command` (string) - The the command to install terraform with.
+- `staging_dir` (string) - The remote path to upload temporary files to.
+- `prevent_sudo` (string) - If set to true wll skip using sudo to elevate permissions to run Terraform with.
+- `variable_string` (string) - Variables passed to terraform (as a JSON string).
+
+<!--
+  A basic example on the usage of the provisioner. Multiple examples
+  can be provided to highlight various configurations.
+
+-->
+### Example Usage
+
+
+```hcl
+ packer {
+   required_plugins {
+     terraform = {
+       version = "= 0.0.7"
+       source = "github.com/servian/terraform"
+     }
+   }
+ }
+
+ source "null" "example" {
+   communicator = "none"
+ }
+
+ build {
+   sources = ["source.null.example"]
+
+   provisioner "terraform" {
+     code_path       = "./tfcode"
+     prevent_sudo    = "true"
+     variable_string = jsonencode({
+         example_node = false
+     })
+     version = "1.0.0"
+   }
+ }
+```
+
